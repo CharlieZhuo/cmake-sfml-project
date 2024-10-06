@@ -2,14 +2,14 @@
 #include <time.h>
 #include <queue>
 #include <vector>
+#include <iostream>
 using namespace sf;
 using namespace std;
 
 struct Point
 {
 	int x, y;
-} a[4], b[4];
-
+};
 struct TetrominoType
 {
 	String name;
@@ -46,7 +46,7 @@ public:
 	// 获取当前方块的移动后各个小方块的位置
 	std::vector<Point> calculateMoveDestination(MoveDirection moveDirection)
 	{
-		std::vector<Point> moveDestination=currentPosition;
+		std::vector<Point> moveDestination = currentPosition;
 		switch (moveDirection)
 		{
 		case MoveDirection::Down:
@@ -110,9 +110,8 @@ public:
 	Board()
 	{
 		activeTetromino = Tetromino();
-		futureTetrominoes.push(Tetromino());
-		futureTetrominoes.push(Tetromino());
-		futureTetrominoes.push(Tetromino());
+		for (int i = 0; i < 3; i++)
+			futureTetrominoes.push(Tetromino());
 	};
 
 	// 检查是否与边界或其他方块碰撞
@@ -164,6 +163,7 @@ public:
 		{
 			while (checkLine(i))
 			{
+				score += 100;
 				clearLine(i);
 			}
 		}
@@ -215,27 +215,21 @@ public:
 			{
 				if (field[i][j] == Color::Black)
 					continue;
-				RectangleShape rect(Vector2f(18, 18));
-				rect.setFillColor(field[i][j]);
-				rect.setOutlineColor(Color::Black);
-				rect.setOutlineThickness(1);
-				rect.setPosition(j * 18, i * 18);
-				rect.move(28, 31); // offset
-				window.draw(rect);
+
+				drawBlock(window, j, i, field[i][j]);
 			}
 		}
 
 		// 画当前方块
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < activeTetromino.getCurrentPosition().size(); i++)
 		{
-			RectangleShape rect(Vector2f(18, 18));
-			rect.setFillColor(activeTetromino.getType().color);
-			rect.setOutlineColor(Color::Black);
-			rect.setOutlineThickness(1);
-			rect.setPosition(activeTetromino.getCurrentPosition()[i].x * 18, activeTetromino.getCurrentPosition()[i].y * 18);
-			rect.move(28, 31); // offset
-			window.draw(rect);
+			Point p = activeTetromino.getCurrentPosition().at(i);
+			drawBlock(window, p.x, p.y, activeTetromino.getType().color);
 		}
+
+		// 画分数
+		drawScore(window);
+
 		window.display();
 	}
 
@@ -253,6 +247,7 @@ public:
 		{
 			activeTetromino.setPosition(pts);
 		}
+		score += 1;
 	}
 
 	void handleKeyEvent(Event e)
@@ -279,6 +274,8 @@ public:
 			if (!willCollide(pts))
 			{
 				activeTetromino.setPosition(pts);
+				if (e.key.code == Keyboard::Down)
+					score += 1;
 			}
 		}
 	}
@@ -289,6 +286,36 @@ private:
 	Color field[BoardHeight][BoardWidth] = {Color::Black}; // Black表示空，其他颜色表示有方块
 	Tetromino activeTetromino;
 	std::queue<Tetromino> futureTetrominoes;
+
+	uint32_t score = 0;
+
+	void drawBlock(RenderWindow &window, int x, int y, Color color)
+	{
+		RectangleShape rect(Vector2f(18, 18));
+		rect.setFillColor(color);
+		rect.setOutlineColor(Color::Black);
+		rect.setOutlineThickness(1);
+		rect.setPosition(x * 18, y * 18);
+		rect.move(28, 31); // offset
+		window.draw(rect);
+	}
+
+	void drawScore(RenderWindow &window)
+	{
+		Font font;
+		if (!font.loadFromFile("fonts/Deng.ttf"))
+		{
+			// error...
+			cout << "Error loading font" << endl;
+		}
+		Text text;
+		text.setFont(font);
+		text.setString(L"分数: " + std::to_wstring(score));
+		text.setCharacterSize(24);
+		text.setFillColor(Color::White);
+		text.setPosition(28, 400);
+		window.draw(text);
+	}
 };
 
 int main()
@@ -296,7 +323,7 @@ int main()
 	Time tickInterval = milliseconds(500);
 	Clock clock;
 
-	RenderWindow window(VideoMode(320, 480), "The Game!");
+	RenderWindow window(VideoMode(320, 480), L"俄罗斯方块");
 	Board board;
 
 	while (window.isOpen())
